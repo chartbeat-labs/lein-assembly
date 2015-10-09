@@ -1,6 +1,6 @@
 (defproject lein-assemble "0.1.0-SNAPSHOT"
   :description "FIXME: write description"
-  :url "http://example.com/FIXME"
+  :url "https://github.com/chartbeat-labs/lein-assembly"
   :license {:name "BSD 3 Clause"
             :url "http://opensource.org/licenses/BSD-3-Clause"}
   :dependencies [[me.raynes/fs "1.4.6"]
