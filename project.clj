@@ -1,4 +1,4 @@
-(defproject lein-assemble "0.1.0-SNAPSHOT"
+(defproject com.chartbeat.cljbeat/lein-assemble "0.1.0-SNAPSHOT"
   :description "FIXME: write description"
   :url "https://github.com/chartbeat-labs/lein-assembly"
   :license {:name "BSD 3 Clause"

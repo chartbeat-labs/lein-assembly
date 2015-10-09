@@ -10,7 +10,7 @@ There are definitely a few bugs and un-supported features. Please make suggestio
 ## Usage
 
 
-Put `[lein-assemble "0.1.0"]` into the `:plugins` vector of your
+Put `[com.chartbeat.cljbeat/lein-assemble "0.1.0"]` into the `:plugins` vector of your
 `:user` profile. I have not tested this on lein 1.0
 
 ### Purpose
