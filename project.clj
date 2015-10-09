@@ -7,4 +7,6 @@
                  [stencil "0.5.0" :exclusions [org.clojure/core.cache]]
                  [org.clojure/clojure "1.6.0"]
                  [org.apache.ant/ant "1.9.4"]]
+  :deploy-repositories [["releases" :clojars]]
+  :signing {:gpg-key "F0903068"}
   :eval-in-leiningen true)
