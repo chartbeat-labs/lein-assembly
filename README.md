@@ -90,7 +90,5 @@ Support exclusion file filters
 
 ## License
 
-Copyright © 2015 FIXME
-
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+Copyright © 2015 Chartbeat
+BSD 3-clause
