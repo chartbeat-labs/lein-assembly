@@ -83,9 +83,9 @@ Defaults
 
 
 ### TODO
-More documentation and examples
-Support more archive formats (zip)
-Support exclusion file filters
+* More documentation and examples
+* Support more archive formats (zip)
+* Support exclusion file filters
 
 
 
