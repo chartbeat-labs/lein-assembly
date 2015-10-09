@@ -1,4 +1,4 @@
-(defproject com.chartbeat.cljbeat/lein-assemble "0.1.1-SNAPSHOT"
+(defproject com.chartbeat.cljbeat/lein-assemble "0.1.1"
   :description "A leiningen plugin to do the job of maven assembly"
   :url "https://github.com/chartbeat-labs/lein-assembly"
   :license {:name "BSD 3 Clause"
