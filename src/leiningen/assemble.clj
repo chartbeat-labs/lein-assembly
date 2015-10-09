@@ -203,7 +203,9 @@
 
 
 (defn assemble
-  "Avengers Assemble!"
+  "Avengers Assemble! Assembles your project from information in the project.clj.
+   Please visit https://github.com/chartbeat-labs/lein-assembly for more information
+  "
   [project & _]
   ; profile merging from lein-jar :)
   (let [scoped-profiles (set (project/pom-scope-profiles project :provided))
