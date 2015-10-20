@@ -65,7 +65,7 @@ Defaults
                         }
              :jar {:dest "lib" :uberjar false}
              :deps {:dest "lib"}
-             :archive {:format :tgz}}
+             :archive {:format :tgz :root-dir ""}}   ;; root-dir specifies the root in the tar file, defaults to archive name
 
  :profiles { :local     {:assemble {
                            :replacements {:stage   "local"

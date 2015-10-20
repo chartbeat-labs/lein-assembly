@@ -147,7 +147,7 @@
   (let [dest-dir (make-file-path root dest)
         process-files (partial do-process-files-for-fileset dest-dir replacements)]
     (lein/info "copying files into " dest-dir)
-    (do-make-location dest-dir)
+    (make-if-not-dir dest-dir)
     (doseq [f fileset]
       (apply process-files f))))
 
@@ -172,7 +172,7 @@
 
 (defn do-make-archive
   "Make tar/zip. Currently only handles tar and tgz extensions."
-  [root name format dest]
+  [root name format archive-root dest]
   (lein/info "making archive")
   (let [final-name (str name (condp = format
                                :zip ".zip"
@@ -186,17 +186,18 @@
       (let [
             root-location (str cwd "/" root)
             files (fs/find-files root #".*")]
+        (lein/debug "mkarchive: root-loc: " root-location " root: " root)
         (.delete tar-file)
         (.mkdirs (.getParentFile tar-file))
         (with-open [tar (TarOutputStream. (FileOutputStream. tar-file))]
           (.setLongFileMode tar TarOutputStream/LONGFILE_GNU)
           (doseq [file files]
             (if (fs/directory? file)
-              (let [tar-root (make-file-path name (str/replace-first (.getAbsolutePath file) root-location ""))]
+              (let [tar-root (make-file-path archive-root (str/replace-first (.getAbsolutePath file) root-location ""))]
                 (add-directory tar tar-root))
-              (let [tar-root (make-file-path name (str/replace-first (.getParent file) root-location ""))]
+              (let [tar-root (make-file-path archive-root (str/replace-first (.getParent file) root-location ""))]
                 (add-file tar tar-root file))))
-          (println "Wrote Tar" (.getCanonicalPath tar-file)))))
+          (lein/info "Wrote Tar" (.getCanonicalPath tar-file)))))
     (when-not (= format :tar)                                 ;unless it's just a tar
       (lein/info "Writing " dest " -> " final-name)
       (gzip (io/file tar-file) (io/file (make-file-path dest final-name))))))
@@ -250,7 +251,8 @@
       (lein/info "Making an archive")
       (let [archive-name (or (:name assembly) (str (:name project) "-" (:version project) "-archive"))
             archive-format (or (:format assembly) :tgz)
-            target (or (:target assembly) "target")]
-        (do-make-archive assembly-root archive-name archive-format target)))
+            target (or (:target assembly) "target")
+            archive-root (or (:root-dir assembly) archive-name)]
+        (do-make-archive assembly-root archive-name archive-format archive-root target)))
 
     (lein/info "Done creating assembly")))
