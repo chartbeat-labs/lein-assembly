@@ -11,7 +11,7 @@ There are definitely a few bugs and un-supported features. Please make suggestio
 ## Usage
 The plugin is hosted on clojars.
 
-Put `[com.chartbeat.cljbeat/lein-assemble "0.1.1"]` into the `:plugins` vector of your
+Put `[com.chartbeat.cljbeat/lein-assemble "0.1.2"]` into the `:plugins` vector of your
 `:user` profile. I have not tested this on lein 1.0
 
 ### Purpose
