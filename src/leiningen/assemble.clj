@@ -113,14 +113,25 @@
 
 (defn process-file
   "process a single file"
-  ([src dest]
-   (lein/debug "Copying: " src " -> " dest)
-   (fs/copy src dest))
-  ([src dest replacements]
-   (lein/debug "Copying with filter: " src " -> " dest)
-   (let [file-str (slurp src)]
-     (with-open [w (clojure.java.io/writer dest)]
-       (.write w (stencil/render-string file-str replacements))))))
+  ([src dest replacements args]
+   (if (not (or (:filter args) (:extending args)))
+     (do
+       (lein/debug "Copying: " src " -> " dest)
+       (fs/copy src dest))
+     (do
+       (lein/debug "Copying with transformations: " src " -> " dest)
+       (with-open [w (clojure.java.io/writer dest)]
+         (let [extending (:extending args)
+               files (cond
+                       (not extending) [src]
+                       (string? extending) [extending src]
+                       (vector? extending) (conj extending src)
+                       :else (concat extending [src]))]
+           (doseq [file files]
+             (let [file-str (slurp file)]
+               (.write w (if (:filter args)
+                           (stencil/render-string file-str replacements)
+                           file-str))))))))))
 
 (defn do-process-files-for-fileset
   "Process a fileset copy operation"
@@ -136,9 +147,7 @@
                           (make-file-path dest (fs/base-name f)))]
           (if (:unzip args)
             (do-unzip f dest)
-            (if (:filter args )
-              (process-file f dest-file replacements)
-              (process-file f dest-file)))))
+            (process-file f dest-file replacements args))))
 
       (lein/warn "No files for fileset " processed-src))))
 
