@@ -7,6 +7,8 @@
                  [stencil "0.5.0" :exclusions [org.clojure/core.cache]]
                  [org.clojure/clojure "1.6.0"]
                  [org.apache.ant/ant "1.9.4"]]
-  :deploy-repositories [["releases" :clojars]]
+  :repositories {"releases" {:url "http://jars.chartbeat.com:7443/releases/"}}
+  :deploy-repositories {"releases" {:url "s3p://chartbeat-jars/releases/"
+                                    :sign-releases false}}
   :signing {:gpg-key "F0903068"}
   :eval-in-leiningen true)
