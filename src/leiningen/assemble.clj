@@ -5,7 +5,7 @@
             [leiningen.jar :as jar]
             [leiningen.core.project :as project]
             [leiningen.core.classpath :as classpath]
-            [stencil.core :as stencil]
+            [clostache.parser :as clostache]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.set :as set])
@@ -106,11 +106,6 @@
   (delete-if-exists location)
   (fs/mkdir location))
 
-(defn stache-filename
-  "run the filename through the mustache filter"
-  [filename replacements]
-  (stencil/render-string filename replacements))
-
 (defn process-file
   "process a single file"
   ([src dest replacements args]
@@ -130,13 +125,13 @@
            (doseq [file files]
              (let [file-str (slurp file)]
                (.write w (if (:filter args)
-                           (stencil/render-string file-str replacements)
+                           (clostache/render file-str replacements)
                            file-str))))))))))
 
 (defn do-process-files-for-fileset
   "Process a fileset copy operation"
   [dest replacements src & opts]
-  (let [processed-src (stache-filename src replacements)
+  (let [processed-src (clostache/render src replacements)
         src-files (fs/glob processed-src)
         args (apply hash-map opts)]
     (if src-files
