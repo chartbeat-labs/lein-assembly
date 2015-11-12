@@ -21,6 +21,28 @@
 
 (def cwd (System/getProperty "user.dir"))
 
+(def default-builtin-replacement-prefix "_")
+
+(def builtin-replacements
+  "Map of keywords to either replacement strings or functions that
+  take the project map as input and return replacement strings.
+  Note that all these keys will be prefixed with builtin-replacement-prefix."
+  {:CWD cwd
+   :PROJECT_VERSION (fn [project] (:version project))
+   :PROJECT_NAME (fn [project] (:name project))})
+
+(defn generate-builtin-replacements
+  "Takes the project map and returns the final version of builtin replacements"
+  [project]
+  (let [prefix (or (:builtin-replacement-prefix (:assemble project))
+                   default-builtin-replacement-prefix)]
+    (into {} (map (fn [[k v]]
+                    [(keyword (str prefix (name k)))
+                     (if (instance? clojure.lang.Fn v)
+                       (v project)
+                       v)])
+                  builtin-replacements))))
+
 (defn gzip
   "Writes the contents of input to output, compressed.
   input: something which can be copied from by io/copy.
@@ -222,7 +244,9 @@
         project (update-in project [:jar-inclusions]
                            concat (:uberjar-inclusions project))
         {assembly-map :assemble, {assembly-root :location, replacements :replacements,
-                                   :or {assembly-root "target/assembly"}} :assemble } project]
+                                  :or {assembly-root "target/assembly"}} :assemble } project
+        replacements (merge (generate-builtin-replacements project)
+                            replacements)]
     (lein/info "Creating assembly in: " assembly-root)
     (lein/debug "Assembly: " assembly-map)
 
