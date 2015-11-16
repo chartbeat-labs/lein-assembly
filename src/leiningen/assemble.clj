@@ -8,12 +8,11 @@
             [clostache.parser :as clostache]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [clojure.set :as set])
+            [clojure.set :as set]
+            [environ.core :refer [env]])
   (:import (java.io ByteArrayOutputStream File FileOutputStream)
            (java.util.zip GZIPOutputStream)
-           (org.apache.tools.tar TarEntry TarOutputStream))
-
-  )
+           (org.apache.tools.tar TarEntry TarOutputStream)))
 
 (defn make-file-path
   [root & rest]
@@ -23,13 +22,22 @@
 
 (def default-builtin-replacement-prefix "_")
 
+(defn- keywordize [s]
+  "environ calls this on all environment variables for some annoying reason.
+  Add it here so that we can support variables in their original format."
+  (-> (str/lower-case s)
+      (str/replace "_" "-")
+      (str/replace "." "-")
+      (keyword)))
+
 (def builtin-replacements
   "Map of keywords to either replacement strings or functions that
   take the project map as input and return replacement strings.
   Note that all these keys will be prefixed with builtin-replacement-prefix."
   {:CWD cwd
    :PROJECT_VERSION (fn [project] (:version project))
-   :PROJECT_NAME (fn [project] (:name project))})
+   :PROJECT_NAME (fn [project] (:name project))
+   :ENV (fn [_] #(env (keywordize (str/trim %))))})
 
 (defn generate-builtin-replacements
   "Takes the project map and returns the final version of builtin replacements"

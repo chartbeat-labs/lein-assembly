@@ -81,6 +81,20 @@ Defaults
             }
 ```
 
+### Builtin replacements
+
+A few common replacements that are more than simple text are builtin. These are
+`CWD`, `PROJECT_NAME`, `PROJECT_VERSION`, and `ENV`, and can be accessed with a
+configurable `:builtin-replacement-prefix` (default `_`). For example
+```
+project_dir={{ _CWD }}
+```
+The `ENV` replacement is template function that uses [environ](https://github.com/weavejester/environ)
+to retrieve the value of a variable from the environment or a .lein-env file
+at the root of the project. It is called with a pair of tags:
+```
+database-url={{#_ENV}} DATABASE_URL {{/_ENV}}
+```
 
 ### TODO
 * More documentation and examples

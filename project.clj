@@ -6,6 +6,7 @@
   :dependencies [[me.raynes/fs "1.4.6-CB"]
                  [de.ubercode.clostache/clostache "1.4.0"]
                  [org.clojure/clojure "1.6.0"]
+                 [environ "1.0.1"]
                  [org.apache.ant/ant "1.9.4"]]
   :repositories {"releases" {:url "http://jars.chartbeat.com:7443/releases/"}}
   :deploy-repositories {"releases" {:url "s3p://chartbeat-jars/releases/"
