@@ -14,6 +14,8 @@ The plugin is hosted on clojars.
 Put `[com.chartbeat.cljbeat/lein-assemble "0.1.2"]` into the `:plugins` vector of your
 `:user` profile. I have not tested this on lein 1.0
 
+[![Clojars Project](http://clojars.org/com.chartbeat.cljbeat/lein-assemble/latest-version.svg)](http://clojars.org/com.chartbeat.cljbeat/lein-assemble)
+
 ### Purpose
 
 This plugin was created to generate assemblies for deploying samza code to a yarn cluster in clojure. In the samza world all of the job's configurations are managed in external files and keeping these files in sync between local/dev/prod environments is error prone. One solution is create variables for server names and other constants that can be filtered at assembly time. More complex configs might require choosing a stage specific version of a file.
@@ -86,8 +88,6 @@ Defaults
 * More documentation and examples
 * Support more archive formats (zip)
 * Support exclusion file filters
-
-
 
 ## License
 
