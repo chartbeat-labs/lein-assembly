@@ -10,14 +10,13 @@
             [clojure.string :as str]
             [clojure.set :as set])
   (:import (java.io ByteArrayOutputStream File FileOutputStream)
-           (java.util.zip GZIPOutputStream)
+           (java.util.zip GZIPOutputStream ZipOutputStream ZipEntry)
            (org.apache.tools.tar TarEntry TarOutputStream))
-
   )
 
 (defn make-file-path
   [root & rest]
-  (.replaceAll (str/join "/" (cons root rest)) "//" "/") )
+  (.replaceAll (str/join "/" (cons root rest)) "//" "/"))
 
 (def cwd (System/getProperty "user.dir"))
 
@@ -34,12 +33,12 @@
 ;; these are from the lein-tar plugin. Respect.
 (defn- add-file [tar path f]
   "Add a file f to the tar at the given path"
-  (let [n (-> (str path "/" (fs/base-name f))
-              ;; nuke leading slashes
-              (.replaceAll "^\\/" ""))
+  (let [n     (-> (str path "/" (fs/base-name f))
+                ;; nuke leading slashes
+                (.replaceAll "^\\/" ""))
         entry (doto (TarEntry. f)
                 (.setName n))]
-    (when-not (empty? n) ;; skip entries with no name
+    (when-not (empty? n)                                    ;; skip entries with no name
       (when (.canExecute f)
         ;; No way to expose unix perms? you've got to be kidding me, java!
         (.setMode entry 0755))
@@ -58,15 +57,30 @@
     (.putNextEntry tar entry)
     (.closeEntry tar)))
 
+
+;; these are from the lein-tar plugin. Respect.
+(defn- add-zip-file [zip path f]
+  "Add a file f to the zip at the given path"
+  (when-not (.isDirectory f)
+    (let [n     (-> (str path "/" (fs/base-name f))
+                  ;; nuke leading slashes
+                  (.replaceAll "^\\/" ""))
+          entry (new ZipEntry n)]
+      (when-not (empty? n)                                  ;; skip entries with no name
+        (.putNextEntry zip entry)
+        (io/copy f zip)
+        (.closeEntry zip)))))
+
+
 (defn do-unzip
   "Does the unzipping of zip/gzip/tgz"
   [archive dest]
   (lein/info "unzipping " archive " to " dest)
-  (let [ext (fs/extension archive)
-        filename (fs/name archive)
-        tar? (or (= ext ".tgz")                             ; if we add more we should refactor :)
-                 (= ext ".tar")
-                 (.endsWith filename "tar"))
+  (let [ext       (fs/extension archive)
+        filename  (fs/name archive)
+        tar?      (or (= ext ".tgz")                        ; if we add more we should refactor :)
+                    (= ext ".tar")
+                    (.endsWith filename "tar"))
         dest-name (if (= ext ".tgz")
                     (str (make-file-path dest filename) ".tar") ; tgz ftw!
                     (make-file-path dest filename))]
@@ -117,16 +131,20 @@
    (if (not (or (:filter args) (:extending args)))
      (do
        (lein/debug "Copying: " src " -> " dest)
-       (fs/copy src dest))
+       (if (fs/directory? src)
+         (fs/copy-dir src dest)
+         (fs/copy src dest)
+         )
+       )
      (do
        (lein/debug "Copying with transformations: " src " -> " dest)
        (with-open [w (clojure.java.io/writer dest)]
          (let [extending (:extending args)
-               files (cond
-                       (not extending) [src]
-                       (string? extending) [extending src]
-                       (vector? extending) (conj extending src)
-                       :else (concat extending [src]))]
+               files     (cond
+                           (not extending) [src]
+                           (string? extending) [extending src]
+                           (vector? extending) (conj extending src)
+                           :else (concat extending [src]))]
            (doseq [file files]
              (let [file-str (slurp file)]
                (.write w (if (:filter args)
@@ -137,8 +155,8 @@
   "Process a fileset copy operation"
   [dest replacements src & opts]
   (let [processed-src (stache-filename src replacements)
-        src-files (fs/glob processed-src)
-        args (apply hash-map opts)]
+        src-files     (fs/glob processed-src)
+        args          (apply hash-map opts)]
     (if src-files
       (doseq [f src-files]
         (lein/debug "copy: " f " -> " dest " opts: " opts " args: " args)
@@ -153,9 +171,9 @@
 
 (defn do-process-fileset
   [root replacements dest fileset]
-  (let [dest-dir (make-file-path root dest)
+  (let [dest-dir      (make-file-path root dest)
         process-files (partial do-process-files-for-fileset dest-dir replacements)]
-    (lein/info "copying files into " dest-dir)
+    (lein/info "Copying files into " dest-dir)
     (make-if-not-dir dest-dir)
     (doseq [f fileset]
       (apply process-files f))))
@@ -182,34 +200,51 @@
 (defn do-make-archive
   "Make tar/zip. Currently only handles tar and tgz extensions."
   [root name format archive-root dest]
-  (lein/info "making archive")
+  (lein/debug "making archive" archive-root)
   (let [final-name (str name (condp = format
                                :zip ".zip"
                                :tar ".tar"
                                :gz ".gz"
                                :tgz ".tgz"
                                ))
-        tar-file (io/file dest (str name ".tar"))]
+        tar-file   (io/file dest (str name ".tar"))]
     (when (or (= format :tar) (= format :tgz))
       ; make a tar file first (or last)
-      (let [
-            root-location (str cwd "/" root)
-            files (fs/find-files root #".*")]
+      (let [root-location (str cwd "/" root)
+            files         (fs/find-files root #".*")]
         (lein/debug "mkarchive: root-loc: " root-location " root: " root)
         (.delete tar-file)
         (.mkdirs (.getParentFile tar-file))
+
+
         (with-open [tar (TarOutputStream. (FileOutputStream. tar-file))]
           (.setLongFileMode tar TarOutputStream/LONGFILE_GNU)
           (doseq [file files]
             (if (fs/directory? file)
               (let [tar-root (make-file-path archive-root (str/replace-first (.getAbsolutePath file) root-location ""))]
+                (lein/debug "adding directory" file)
                 (add-directory tar tar-root))
               (let [tar-root (make-file-path archive-root (str/replace-first (.getParent file) root-location ""))]
+                (lein/debug "adding files" file)
                 (add-file tar tar-root file))))
           (lein/info "Wrote Tar" (.getCanonicalPath tar-file)))))
-    (when-not (= format :tar)                                 ;unless it's just a tar
-      (lein/info "Writing " dest " -> " final-name)
-      (gzip (io/file tar-file) (io/file (make-file-path dest final-name))))))
+    (when (= format :zip)
+      (let [root-location (str cwd "/" root)
+            files         (fs/find-files root #".*")
+            zip-file      (io/file dest final-name)]
+        (lein/debug "mkarchive: root-loc: " root-location " root: " root)
+        (.delete zip-file)
+        (.mkdirs (.getParentFile zip-file))
+        (with-open [zip (-> (make-file-path dest final-name) io/output-stream ZipOutputStream.)]
+          (doseq [file files]
+            (let [zip-root (make-file-path archive-root (str/replace-first (.getParent file) root-location ""))]
+              (lein/debug "adding files" file)
+              (add-zip-file zip zip-root file)))
+          (lein/info "Wrote Zip" (.getCanonicalPath zip-file)))))
+    (when (= format :tgz)
+      (do                                                   ; Output tar file
+        (lein/info "Writing " dest " -> " final-name)
+        (gzip (io/file tar-file) (io/file (make-file-path dest final-name)))))))
 
 
 (defn assemble
@@ -218,16 +253,16 @@
   "
   [project & _]
   ; profile merging from lein-jar :)
-  (let [scoped-profiles (set (project/pom-scope-profiles project :provided))
-        default-profiles (set (project/expand-profile project :default))
+  (let [scoped-profiles   (set (project/pom-scope-profiles project :provided))
+        default-profiles  (set (project/expand-profile project :default))
         provided-profiles (remove
                             (set/difference default-profiles scoped-profiles)
                             (-> project meta :included-profiles))
-        project (project/merge-profiles (project/merge-profiles project [:uberjar]) provided-profiles)
-        project (update-in project [:jar-inclusions]
-                           concat (:uberjar-inclusions project))
+        project           (project/merge-profiles (project/merge-profiles project [:uberjar]) provided-profiles)
+        project           (update-in project [:jar-inclusions]
+                            concat (:uberjar-inclusions project))
         {assembly-map :assemble, {assembly-root :location, replacements :replacements,
-                                   :or {assembly-root "target/assembly"}} :assemble } project]
+                                  :or           {assembly-root "target/assembly"}} :assemble} project]
     (lein/info "Creating assembly in: " assembly-root)
     (lein/debug "Assembly: " assembly-map)
 
@@ -243,10 +278,10 @@
     (when (:deps assembly-map)
       (lein/info "Copying Dependencies:")
       (let [whitelisted (select-keys project jar/whitelist-keys)
-            project (-> (project/unmerge-profiles project [:default])
-                        (merge whitelisted))
-            deps (->> (classpath/resolve-dependencies :dependencies project)
-                      (filter #(.endsWith (.getName %) ".jar")))]
+            project     (-> (project/unmerge-profiles project [:default])
+                          (merge whitelisted))
+            deps        (->> (classpath/resolve-dependencies :dependencies project)
+                          (filter #(.endsWith (.getName %) ".jar")))]
         (do-copy-deps (make-file-path assembly-root (get-in assembly-map [:deps :dest])) deps)))
 
     ; copy my jar
@@ -258,10 +293,10 @@
     ; make a zip of the assembly
     (when-let [assembly (:archive assembly-map)]
       (lein/info "Making an archive")
-      (let [archive-name (or (:name assembly) (str (:name project) "-" (:version project) "-archive"))
+      (let [archive-name   (or (:name assembly) (str (:name project) "-" (:version project) "-archive"))
             archive-format (or (:format assembly) :tgz)
-            target (or (:target assembly) "target")
-            archive-root (or (:root-dir assembly) archive-name)]
+            target         (or (:target assembly) "target")
+            archive-root   (or (:root-dir assembly) archive-name)]
         (do-make-archive assembly-root archive-name archive-format archive-root target)))
 
     (lein/info "Done creating assembly")))

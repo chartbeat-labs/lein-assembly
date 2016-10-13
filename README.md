@@ -37,7 +37,7 @@ The following project.clj snippet shows off the functionality.
 * Mustache filtering on filenames and text in the files themselves
 * Project dependencies can be externalized into a directory in the archive
 * The project jar or uberjar can be added to the archive
-* A tar or tgz file can be created from the archive
+* A tar, tgz or zip file can be created from the archive
 * Glob filtering on file inclusions
 * unzipping of support archive files that you need in the assembly
 
@@ -45,7 +45,7 @@ Defaults
 
 ``:location`` /target/assembly - where the archive is populated.
 
-``:archive :format`` :tgz   - creates a .tgz, you can specify :tar instead
+``:archive :format`` :tgz   - creates a .tgz, you can specify :tar or :zip instead
 
 ``:archive :name`` PROJECT-NAME-VERSION-archive
 
@@ -86,7 +86,6 @@ Defaults
 
 ### TODO
 * More documentation and examples
-* Support more archive formats (zip)
 * Support exclusion file filters
 
 ## License
