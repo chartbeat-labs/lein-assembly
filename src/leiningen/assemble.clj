@@ -34,11 +34,11 @@
 (defn- add-file [tar path f]
   "Add a file f to the tar at the given path"
   (let [n     (-> (str path "/" (fs/base-name f))
-                ;; nuke leading slashes
-                (.replaceAll "^\\/" ""))
+                  ;; nuke leading slashes
+                  (.replaceAll "^\\/" ""))
         entry (doto (TarEntry. f)
                 (.setName n))]
-    (when-not (empty? n)                                    ;; skip entries with no name
+    (when-not (empty? n) ;; skip entries with no name
       (when (.canExecute f)
         ;; No way to expose unix perms? you've got to be kidding me, java!
         (.setMode entry 0755))
@@ -63,8 +63,8 @@
   "Add a file f to the zip at the given path"
   (when-not (.isDirectory f)
     (let [n     (-> (str path "/" (fs/base-name f))
-                  ;; nuke leading slashes
-                  (.replaceAll "^\\/" ""))
+                    ;; nuke leading slashes
+                    (.replaceAll "^\\/" ""))
           entry (new ZipEntry n)]
       (when-not (empty? n)                                  ;; skip entries with no name
         (.putNextEntry zip entry)
@@ -79,13 +79,13 @@
   (let [ext       (fs/extension archive)
         filename  (fs/name archive)
         tar?      (or (= ext ".tgz")                        ; if we add more we should refactor :)
-                    (= ext ".tar")
-                    (.endsWith filename "tar"))
+                      (= ext ".tar")
+                      (.endsWith filename "tar"))
         dest-name (if (= ext ".tgz")
                     (str (make-file-path dest filename) ".tar") ; tgz ftw!
                     (make-file-path dest filename))]
 
-    ;(lein/info dest-name tar?)
+                                        ;(lein/info dest-name tar?)
     (condp = ext
       ".zip" (comp/unzip archive dest-name)
       ".gz" (comp/gunzip archive dest-name)
@@ -209,7 +209,7 @@
                                ))
         tar-file   (io/file dest (str name ".tar"))]
     (when (or (= format :tar) (= format :tgz))
-      ; make a tar file first (or last)
+                                        ; make a tar file first (or last)
       (let [root-location (str cwd "/" root)
             files         (fs/find-files root #".*")]
         (lein/debug "mkarchive: root-loc: " root-location " root: " root)
@@ -252,45 +252,45 @@
    Please visit https://github.com/chartbeat-labs/lein-assembly for more information
   "
   [project & _]
-  ; profile merging from lein-jar :)
+                                        ; profile merging from lein-jar :)
   (let [scoped-profiles   (set (project/pom-scope-profiles project :provided))
         default-profiles  (set (project/expand-profile project :default))
         provided-profiles (remove
-                            (set/difference default-profiles scoped-profiles)
-                            (-> project meta :included-profiles))
+                           (set/difference default-profiles scoped-profiles)
+                           (-> project meta :included-profiles))
         project           (project/merge-profiles (project/merge-profiles project [:uberjar]) provided-profiles)
         project           (update-in project [:jar-inclusions]
-                            concat (:uberjar-inclusions project))
+                                     concat (:uberjar-inclusions project))
         {assembly-map :assemble, {assembly-root :location, replacements :replacements,
                                   :or           {assembly-root "target/assembly"}} :assemble} project]
     (lein/info "Creating assembly in: " assembly-root)
     (lein/debug "Assembly: " assembly-map)
 
-    ; make distribution target directory
+                                        ; make distribution target directory
     (do-make-location assembly-root)
 
-    ; copy and filter files
+                                        ; copy and filter files
     (lein/debug "process filesets: " (:filesets assembly-map))
     (doseq [fileset (:filesets assembly-map)]
       (apply do-process-fileset assembly-root replacements (first fileset) (rest fileset)))
 
-    ; copy dependencies
+                                        ; copy dependencies
     (when (:deps assembly-map)
       (lein/info "Copying Dependencies:")
       (let [whitelisted (select-keys project jar/whitelist-keys)
             project     (-> (project/unmerge-profiles project [:default])
-                          (merge whitelisted))
+                            (merge whitelisted))
             deps        (->> (classpath/resolve-dependencies :dependencies project)
-                          (filter #(.endsWith (.getName %) ".jar")))]
+                             (filter #(.endsWith (.getName %) ".jar")))]
         (do-copy-deps (make-file-path assembly-root (get-in assembly-map [:deps :dest])) deps)))
 
-    ; copy my jar
+                                        ; copy my jar
     (when-let [j (:jar assembly-map)]
       (let [jar (jar/get-jar-filename project (get-in assembly-map [:jar :uberjar]))]
         (lein/info "Copying jar: " jar j)
         (do-copy-jar jar assembly-root j)))
 
-    ; make a zip of the assembly
+                                        ; make a zip of the assembly
     (when-let [assembly (:archive assembly-map)]
       (lein/info "Making an archive")
       (let [archive-name   (or (:name assembly) (str (:name project) "-" (:version project) "-archive"))
