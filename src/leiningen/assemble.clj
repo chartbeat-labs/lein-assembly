@@ -11,12 +11,15 @@
             [clojure.set :as set])
   (:import (java.io ByteArrayOutputStream File FileOutputStream)
            (java.util.zip GZIPOutputStream ZipOutputStream ZipEntry)
-           (org.apache.tools.tar TarEntry TarOutputStream))
+           (org.apache.tools.tar TarEntry TarOutputStream)
+	   (java.util.regex Matcher))
   )
 
 (defn make-file-path
   [root & rest]
-  (.replaceAll (str/join "/" (cons root rest)) "//" "/"))
+  (.replaceAll (str/join File/separator (cons root rest))
+               (Matcher/quoteReplacement (str File/separator File/separator))
+               (Matcher/quoteReplacement File/separator)))
 
 (def cwd (System/getProperty "user.dir"))
 
@@ -30,15 +33,20 @@
   (with-open [output (-> output io/output-stream GZIPOutputStream.)]
     (apply io/copy input output opts)))
 
+(defn- remove-leading [path]
+  (.replaceAll path(str "^" (Matcher/quoteReplacement File/separator))
+                             ""))
+
 ;; these are from the lein-tar plugin. Respect.
 (defn- add-file [tar path f]
   "Add a file f to the tar at the given path"
-  (let [n     (-> (str path "/" (fs/base-name f))
+  (let [n (-> (make-file-path path (fs/base-name f))
                   ;; nuke leading slashes
-                  (.replaceAll "^\\/" ""))
+              (remove-leading))
         entry (doto (TarEntry. f)
                 (.setName n))]
-    (when-not (empty? n) ;; skip entries with no name
+    (lein/debug "adding file " f " at " path " as " n)
+    (when-not (empty? n)                                    ;; skip entries with no name
       (when (.canExecute f)
         ;; No way to expose unix perms? you've got to be kidding me, java!
         (.setMode entry 0755))
@@ -52,10 +60,14 @@
   [tar path]
   ;; minor hack, we use the cwd as the model for any plain directories
   ;; that we're adding
-  (let [entry (doto (TarEntry. (io/file cwd))
-                (.setName path))]
-    (.putNextEntry tar entry)
-    (.closeEntry tar)))
+  (let [n (io/file cwd)
+        path (remove-leading path)]
+    (when (seq path)
+      (lein/debug "adding directory " n " as " path)
+      (let [entry (doto (TarEntry. n)
+                    (.setName path))]
+        (.putNextEntry tar entry)
+        (.closeEntry tar)))))
 
 
 ;; these are from the lein-tar plugin. Respect.
@@ -155,7 +167,7 @@
   "Process a fileset copy operation"
   [dest replacements src & opts]
   (let [processed-src (stache-filename src replacements)
-        src-files     (fs/glob processed-src)
+        src-files (fs/glob (str (fs/file processed-src)))
         args          (apply hash-map opts)]
     (if src-files
       (doseq [f src-files]
@@ -210,7 +222,8 @@
         tar-file   (io/file dest (str name ".tar"))]
     (when (or (= format :tar) (= format :tgz))
                                         ; make a tar file first (or last)
-      (let [root-location (str cwd "/" root)
+      (let [
+            root-location (str (fs/file (str cwd "/" root)))
             files         (fs/find-files root #".*")]
         (lein/debug "mkarchive: root-loc: " root-location " root: " root)
         (.delete tar-file)
