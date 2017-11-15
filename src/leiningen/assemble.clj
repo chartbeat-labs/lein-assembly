@@ -12,8 +12,8 @@
   (:import (java.io ByteArrayOutputStream File FileOutputStream)
            (java.util.zip GZIPOutputStream ZipOutputStream ZipEntry)
            (org.apache.tools.tar TarEntry TarOutputStream)
-	   (java.util.regex Matcher))
-  )
+     (java.util.regex Matcher)))
+
 
 (defn make-file-path
   [root & rest]
@@ -35,7 +35,7 @@
 
 (defn- remove-leading [path]
   (.replaceAll path(str "^" (Matcher/quoteReplacement File/separator))
-                             ""))
+                   ""))
 
 ;; these are from the lein-tar plugin. Respect.
 (defn- add-file [tar path f]
@@ -130,7 +130,7 @@
   [location]
   (lein/info "Creating: " location)
   (delete-if-exists location)
-  (fs/mkdir location))
+  (fs/mkdirs location))
 
 (defn stache-filename
   "run the filename through the mustache filter"
@@ -145,9 +145,9 @@
        (lein/debug "Copying: " src " -> " dest)
        (if (fs/directory? src)
          (fs/copy-dir src dest)
-         (fs/copy src dest)
-         )
-       )
+         (fs/copy src dest)))
+
+
      (do
        (lein/debug "Copying with transformations: " src " -> " dest)
        (with-open [w (clojure.java.io/writer dest)]
@@ -217,8 +217,8 @@
                                :zip ".zip"
                                :tar ".tar"
                                :gz ".gz"
-                               :tgz ".tgz"
-                               ))
+                               :tgz ".tgz"))
+
         tar-file   (io/file dest (str name ".tar"))]
     (when (or (= format :tar) (= format :tgz))
                                         ; make a tar file first (or last)
